@@ -200,6 +200,15 @@ log_info "Creating workspace directory..."
 mkdir -p "${UBUNTU_HOME}/workspace"
 chown ubuntu:ubuntu "${UBUNTU_HOME}/workspace"
 
+# Install Ghostty terminfo (fixes "terminal is not fully functional" when SSHing from Ghostty)
+log_info "Installing Ghostty terminfo..."
+if ! infocmp xterm-ghostty &>/dev/null; then
+    tic -x "${SCRIPTS_DIR}/xterm-ghostty.terminfo"
+    log_info "Ghostty terminfo installed"
+else
+    log_info "Ghostty terminfo already installed"
+fi
+
 # Configure git for ubuntu user
 log_info "Configuring git..."
 sudo -u ubuntu git config --global init.defaultBranch main
