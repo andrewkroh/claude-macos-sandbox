@@ -241,6 +241,7 @@ cat > "${ALIASES_FILE}" << 'EOF'
 # Claude Code aliases (claude-noprivs is the safer default)
 alias claude='claude-noprivs'
 alias c='claude-noprivs'
+alias c-danger='claude-noprivs --dangerously-skip-permissions'
 alias workspace='cd ~/workspace'
 
 # Backup/restore aliases
