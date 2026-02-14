@@ -233,11 +233,10 @@ sudo -u ubuntu git config --global push.default simple
 sudo -u ubuntu git config --global user.email "id-github@andrewkroh.com"
 sudo -u ubuntu git config --global user.name "Andrew Kroh"
 
-# Set up bash aliases for convenience (idempotent)
+# Set up bash aliases (overwrite on each run for idempotency)
 log_info "Setting up bash aliases..."
-if ! grep -q "# Claude Code aliases" "${UBUNTU_HOME}/.bashrc" 2>/dev/null; then
-    cat >> "${UBUNTU_HOME}/.bashrc" << 'EOF'
-
+ALIASES_FILE="${UBUNTU_HOME}/.bash_aliases_claude"
+cat > "${ALIASES_FILE}" << 'EOF'
 # Claude Code aliases (claude-noprivs is the safer default)
 alias claude='claude-noprivs'
 alias c='claude-noprivs'
@@ -250,9 +249,13 @@ alias gc='git commit'
 alias gp='git push'
 alias gl='git log --oneline -10'
 EOF
-    chown ubuntu:ubuntu "${UBUNTU_HOME}/.bashrc"
-else
-    log_info "Bash aliases already configured"
+chown ubuntu:ubuntu "${ALIASES_FILE}"
+
+# Source aliases file from .bashrc (idempotent)
+if ! grep -q "source.*\.bash_aliases_claude" "${UBUNTU_HOME}/.bashrc" 2>/dev/null; then
+    echo "" >> "${UBUNTU_HOME}/.bashrc"
+    echo "# Load Claude setup aliases" >> "${UBUNTU_HOME}/.bashrc"
+    echo "[ -f ~/.bash_aliases_claude ] && source ~/.bash_aliases_claude" >> "${UBUNTU_HOME}/.bashrc"
 fi
 
 # Configure Claude Code sandbox settings
