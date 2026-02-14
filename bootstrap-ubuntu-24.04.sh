@@ -163,6 +163,7 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Install firewall and privilege-drop scripts
 log_info "Installing firewall and privilege-drop scripts..."
 chmod +x "${SCRIPTS_DIR}/firewall-up.sh" "${SCRIPTS_DIR}/firewall-down.sh" "${SCRIPTS_DIR}/claude-noprivs"
+chmod +x "${SCRIPTS_DIR}/backup-claude.sh" "${SCRIPTS_DIR}/restore-claude.sh"
 ln -sf "${SCRIPTS_DIR}/claude-noprivs" /usr/local/bin/claude-noprivs
 
 # Setup ubuntu user SSH key
@@ -241,6 +242,10 @@ cat > "${ALIASES_FILE}" << 'EOF'
 alias claude='claude-noprivs'
 alias c='claude-noprivs'
 alias workspace='cd ~/workspace'
+
+# Backup/restore aliases
+alias claude-backup='/home/ubuntu/code/andrewkroh/claude-setup/backup-claude.sh'
+alias claude-restore='/home/ubuntu/code/andrewkroh/claude-setup/restore-claude.sh'
 
 # Git aliases
 alias gs='git status'
@@ -349,6 +354,11 @@ echo "Host firewall:"
 echo "  - firewall-up.sh / firewall-down.sh installed"
 echo "  - claude-noprivs wrapper: /usr/local/bin/claude-noprivs"
 echo "  - Status line configured (shows FW and NNP status)"
+echo ""
+echo "Backup/restore:"
+echo "  - claude-backup: save ~/.claude/ and ~/.claude.json"
+echo "  - claude-restore: restore from latest backup"
+echo "  - Backups stored in: ${SCRIPTS_DIR}/backups/"
 echo ""
 # Get the primary IP address
 VM_IP=$(hostname -I | awk '{print $1}')
