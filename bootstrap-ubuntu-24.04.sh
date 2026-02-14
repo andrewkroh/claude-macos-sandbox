@@ -68,7 +68,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     bubblewrap \
     libseccomp2 \
     libseccomp-dev \
-    socat
+    socat \
+    ipset \
+    dnsutils
 
 # Install Node.js (LTS version via NodeSource)
 log_info "Installing Node.js LTS..."
@@ -138,6 +140,14 @@ APPARMOR_EOF
 apparmor_parser -r /etc/apparmor.d/bwrap
 log_info "AppArmor profile for bubblewrap loaded"
 
+# Determine script directory for installing companion scripts
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Install firewall and privilege-drop scripts
+log_info "Installing firewall and privilege-drop scripts..."
+chmod +x "${SCRIPTS_DIR}/firewall-up.sh" "${SCRIPTS_DIR}/firewall-down.sh" "${SCRIPTS_DIR}/claude-noprivs"
+ln -sf "${SCRIPTS_DIR}/claude-noprivs" /usr/local/bin/claude-noprivs
+
 # Setup ubuntu user SSH key
 log_info "Setting up SSH key for ubuntu user..."
 UBUNTU_HOME="/home/ubuntu"
@@ -190,6 +200,13 @@ log_info "Creating workspace directory..."
 mkdir -p "${UBUNTU_HOME}/workspace"
 chown ubuntu:ubuntu "${UBUNTU_HOME}/workspace"
 
+# Configure git for ubuntu user
+log_info "Configuring git..."
+sudo -u ubuntu git config --global init.defaultBranch main
+sudo -u ubuntu git config --global push.default simple
+sudo -u ubuntu git config --global user.email "id-github@andrewkroh.com"
+sudo -u ubuntu git config --global user.name "Andrew Kroh"
+
 # Set up bash aliases for convenience (idempotent)
 log_info "Setting up bash aliases..."
 if ! grep -q "# Claude Code aliases" "${UBUNTU_HOME}/.bashrc" 2>/dev/null; then
@@ -216,7 +233,12 @@ log_info "Configuring Claude Code sandbox settings..."
 CLAUDE_CONFIG_DIR="${UBUNTU_HOME}/.claude"
 mkdir -p "${CLAUDE_CONFIG_DIR}"
 
-# Create settings file with sandbox enabled and seccomp isolation
+# Install status line script
+log_info "Installing status line script..."
+cp "${SCRIPTS_DIR}/statusline.sh" "${CLAUDE_CONFIG_DIR}/statusline.sh"
+chmod +x "${CLAUDE_CONFIG_DIR}/statusline.sh"
+
+# Create settings file with sandbox enabled, seccomp isolation, and status line
 cat > "${CLAUDE_CONFIG_DIR}/settings.json" << 'EOF'
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
@@ -231,6 +253,10 @@ cat > "${CLAUDE_CONFIG_DIR}/settings.json" << 'EOF'
       "enabled": true,
       "blockUnixSockets": true
     }
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
   }
 }
 EOF
@@ -288,11 +314,20 @@ echo "  - Seccomp filtering enabled"
 echo "  - Unix sockets blocked"
 echo "  - Config: ${CLAUDE_CONFIG_DIR}/settings.json"
 echo ""
+echo "Host firewall:"
+echo "  - firewall-up.sh / firewall-down.sh installed"
+echo "  - claude-noprivs wrapper: /usr/local/bin/claude-noprivs"
+echo "  - Status line configured (shows FW and NNP status)"
+echo ""
 # Get the primary IP address
 VM_IP=$(hostname -I | awk '{print $1}')
 
 echo "Next steps:"
 echo "  1. SSH into the VM: ssh ubuntu@${VM_IP}"
 echo "  2. Authenticate Claude: claude auth"
-echo "  3. Start using Claude: claude"
+echo "  3. Start with firewall:"
+echo "     sudo ${SCRIPTS_DIR}/firewall-up.sh"
+echo "     claude-noprivs"
+echo "     # ... work ..."
+echo "     sudo ${SCRIPTS_DIR}/firewall-down.sh"
 echo ""
