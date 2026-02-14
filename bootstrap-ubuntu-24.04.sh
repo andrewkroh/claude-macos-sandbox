@@ -93,17 +93,34 @@ else
     log_info "GitHub CLI already installed: $(gh --version | head -1)"
 fi
 
-# Install Claude Code
-log_info "Installing Claude Code..."
-if ! command -v claude &> /dev/null; then
-    npm install -g @anthropic-ai/claude-code
+# Install Go
+GO_VERSION="go1.26.0"
+case "$(uname -m)" in
+    x86_64)  GO_ARCH="amd64" ;;
+    aarch64) GO_ARCH="arm64" ;;
+    *)       log_error "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+log_info "Installing ${GO_VERSION} (${GO_ARCH})..."
+if [[ -x /usr/local/go/bin/go ]] && /usr/local/go/bin/go version | grep -q "${GO_VERSION}"; then
+    log_info "Go already installed: $(/usr/local/go/bin/go version)"
 else
-    log_info "Claude Code already installed: $(claude --version 2>/dev/null || echo 'installed')"
+    GO_TARBALL="${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
+    curl -fsSL "https://go.dev/dl/${GO_TARBALL}" -o "/tmp/${GO_TARBALL}"
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf "/tmp/${GO_TARBALL}"
+    rm -f "/tmp/${GO_TARBALL}"
+    # Add Go to system-wide PATH
+    echo 'export PATH=$PATH:/usr/local/go/bin' > /etc/profile.d/golang.sh
+    log_info "Go installed: $(/usr/local/go/bin/go version)"
 fi
 
-# Install sandbox runtime for seccomp filtering (blocks unix domain sockets)
-log_info "Installing Claude Code sandbox runtime..."
-npm install -g @anthropic-ai/sandbox-runtime
+# Install Claude Code (native installer, runs as ubuntu user)
+log_info "Installing Claude Code..."
+if sudo -u ubuntu bash -c 'command -v claude' &> /dev/null; then
+    log_info "Claude Code already installed: $(sudo -u ubuntu claude --version 2>/dev/null || echo 'installed')"
+else
+    sudo -u ubuntu bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
+fi
 
 # Verify bubblewrap sandbox dependencies
 log_info "Verifying sandbox dependencies..."
@@ -221,8 +238,9 @@ log_info "Setting up bash aliases..."
 if ! grep -q "# Claude Code aliases" "${UBUNTU_HOME}/.bashrc" 2>/dev/null; then
     cat >> "${UBUNTU_HOME}/.bashrc" << 'EOF'
 
-# Claude Code aliases
-alias c='claude'
+# Claude Code aliases (claude-noprivs is the safer default)
+alias claude='claude-noprivs'
+alias c='claude-noprivs'
 alias workspace='cd ~/workspace'
 
 # Git aliases
@@ -302,7 +320,8 @@ echo "  - Node.js $(node --version)"
 echo "  - npm $(npm --version)"
 echo "  - Git $(git --version | cut -d' ' -f3)"
 echo "  - GitHub CLI $(gh --version | head -1 | cut -d' ' -f3)"
-echo "  - Claude Code (claude command)"
+echo "  - Claude Code $("${UBUNTU_HOME}/.local/bin/claude" --version 2>/dev/null || echo '(installed)')"
+echo "  - Go $(/usr/local/go/bin/go version | cut -d' ' -f3)"
 echo "  - Python $(python3 --version | cut -d' ' -f2)"
 echo "  - bubblewrap $(bwrap --version) (sandbox)"
 echo "  - libseccomp2 (seccomp filtering)"
