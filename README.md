@@ -14,7 +14,7 @@ inside an isolated VM with multiple security layers.
 │  macOS Host                                                     │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │  Multipass VM  (Ubuntu 24.04, 4 CPU / 8 GB / 50 GB)      │  │
+│  │  Multipass VM  (Ubuntu 24.04, 4 CPU / 8 GB / 50 GB)       │  │
 │  │                                                           │  │
 │  │  ┌────────────────────────────────────────────────────┐   │  │
 │  │  │  iptables / ipset Firewall                         │   │  │
