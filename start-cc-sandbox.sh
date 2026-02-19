@@ -37,7 +37,7 @@ print_ssh_command() {
     echo "========================================"
     echo ""
     echo "Connect with:"
-    echo "  ssh ubuntu@${ip}"
+    echo "  ssh -o SendEnv=GH_TOKEN ubuntu@${ip}"
     echo ""
     echo "Or use multipass:"
     echo "  multipass shell ${VM_NAME}"

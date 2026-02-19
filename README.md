@@ -152,16 +152,19 @@ without persisting credentials on disk.
    ```bash
    export GH_TOKEN="ghp_..."
    ```
-3. Configure SSH to forward it — add to `~/.ssh/config`:
+3. Forward it when you SSH in:
+   ```bash
+   ssh -o SendEnv=GH_TOKEN ubuntu@<vm-ip>
+   ```
+   Or configure it permanently in `~/.ssh/config`:
    ```
    Host cc-sandbox
        HostName <vm-ip>
        User ubuntu
        SendEnv GH_TOKEN
    ```
-4. SSH in and verify:
+4. Verify inside the VM:
    ```bash
-   ssh cc-sandbox
    gh auth status
    ```
 
