@@ -23,7 +23,7 @@ inside an isolated VM with multiple security layers.
 │  │  │                                                    │   │  │
 │  │  │  ┌─────────────────────────────────────────────┐   │   │  │
 │  │  │  │  Unprivileged User (ubuntu)                 │   │   │  │
-│  │  │  │  SSH key-only auth (Yubikey)                │   │   │  │
+│  │  │  │  SSH key-only auth                          │   │   │  │
 │  │  │  │                                             │   │   │  │
 │  │  │  │  ┌──────────────────────────────────────┐   │   │   │  │
 │  │  │  │  │  setpriv --no-new-privs              │   │   │   │  │
@@ -83,7 +83,7 @@ Scripts: `firewall-up.sh`, `firewall-down.sh`, `allowed-domains.conf`
 
 Claude Code runs as the `ubuntu` user, not root.
 
-- SSH access is key-only (backed by a Yubikey hardware token)
+- SSH access is key-only
 - Password authentication and root login are disabled
 - Root login via SSH is disabled
 
