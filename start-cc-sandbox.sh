@@ -4,26 +4,21 @@
 
 set -euo pipefail
 
-VM_NAME="cc-sandbox"
-CPUS=4
-MEMORY="8G"
-DISK="50G"
-MOUNT_SOURCE="/Users/akroh/code"
-MOUNT_TARGET="/home/ubuntu/code"
-BOOTSTRAP_SCRIPT="/home/ubuntu/code/andrewkroh/claude-setup/bootstrap-ubuntu-24.04.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-# Colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+# Derive the bootstrap script path inside the VM.
+# Strip the HOST_MOUNT prefix from REPO_DIR and prepend VM_MOUNT.
+if [[ "${REPO_DIR}" != "${HOST_MOUNT}"* ]]; then
+    log_error "This repository (${REPO_DIR}) is not under HOST_MOUNT (${HOST_MOUNT})."
+    log_error "Update HOST_MOUNT in sandbox.conf so it contains this repo."
+    exit 1
+fi
+REPO_REL="${REPO_DIR#"${HOST_MOUNT}"}"
+BOOTSTRAP_SCRIPT="${VM_MOUNT}${REPO_REL}/bootstrap-ubuntu-24.04.sh"
 
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
+if [[ -z "${SSH_PUBLIC_KEY:-}" ]]; then
+    log_warn "SSH_PUBLIC_KEY is empty in sandbox.conf — VM will not have SSH key access."
+fi
 
 get_vm_ip() {
     multipass info "${VM_NAME}" --format json | jq -r '.info["'"${VM_NAME}"'"].ipv4[0]'
@@ -85,13 +80,13 @@ case "${STATE}" in
 esac
 
 # Create new VM
-log_info "Launching VM with ${CPUS} CPUs, ${MEMORY} memory, ${DISK} disk..."
+log_info "Launching VM with ${VM_CPUS} CPUs, ${VM_MEMORY} memory, ${VM_DISK} disk..."
 multipass launch 24.04 \
     --name "${VM_NAME}" \
-    --cpus "${CPUS}" \
-    --memory "${MEMORY}" \
-    --disk "${DISK}" \
-    --mount "${MOUNT_SOURCE}:${MOUNT_TARGET}"
+    --cpus "${VM_CPUS}" \
+    --memory "${VM_MEMORY}" \
+    --disk "${VM_DISK}" \
+    --mount "${HOST_MOUNT}:${VM_MOUNT}"
 
 # Wait for VM to be fully ready
 log_info "Waiting for VM to be ready..."
@@ -99,9 +94,9 @@ sleep 10
 
 # Verify mount is available
 log_info "Verifying mount..."
-if ! multipass exec "${VM_NAME}" -- test -d "${MOUNT_TARGET}"; then
+if ! multipass exec "${VM_NAME}" -- test -d "${VM_MOUNT}"; then
     log_warn "Mount not available, attempting to mount..."
-    multipass mount "${MOUNT_SOURCE}" "${VM_NAME}:${MOUNT_TARGET}"
+    multipass mount "${HOST_MOUNT}" "${VM_NAME}:${VM_MOUNT}"
     sleep 2
 fi
 

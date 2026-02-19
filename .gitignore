@@ -1,2 +1,5 @@
 # Claude backups (contain credentials and personal data)
 backups/
+
+# User-specific configuration (contains SSH keys, git identity)
+sandbox.conf

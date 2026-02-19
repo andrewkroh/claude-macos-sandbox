@@ -6,7 +6,8 @@
 
 set -euo pipefail
 
-BACKUP_DIR="/home/ubuntu/code/andrewkroh/claude-setup/backups"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKUP_DIR="${SCRIPT_DIR}/backups"
 
 # Colors
 GREEN='\033[0;32m'

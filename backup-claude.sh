@@ -4,7 +4,8 @@
 
 set -euo pipefail
 
-BACKUP_DIR="/home/ubuntu/code/andrewkroh/claude-setup/backups"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKUP_DIR="${SCRIPT_DIR}/backups"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/claude-backup-${TIMESTAMP}.tar.gz"
 

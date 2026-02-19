@@ -1,0 +1,25 @@
+# shellcheck shell=bash
+# sandbox.conf — User-specific configuration for claude-setup
+#
+# Copy this file to sandbox.conf and fill in your values:
+#   cp sandbox.conf.example sandbox.conf
+#
+# sandbox.conf is git-ignored and will not be committed.
+
+# VM settings
+VM_NAME="cc-sandbox"
+VM_CPUS=4
+VM_MEMORY="8G"
+VM_DISK="50G"
+
+# Mount settings
+HOST_MOUNT="$HOME/code"           # macOS host directory to mount into the VM
+VM_MOUNT="/home/ubuntu/code"      # mount point inside the VM
+
+# Git identity (leave empty to skip configuration)
+GIT_USER_NAME=""
+GIT_USER_EMAIL=""
+
+# SSH public key for VM access (leave empty to skip)
+# Paste the output of: cat ~/.ssh/id_ed25519.pub (or id_rsa.pub)
+SSH_PUBLIC_KEY=""

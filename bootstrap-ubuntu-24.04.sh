@@ -5,29 +5,13 @@
 
 set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Check if running as root
+# Minimal check before lib.sh is available.
 if [[ $EUID -ne 0 ]]; then
-    log_error "This script must be run as root (use sudo)"
+    echo -e "\033[0;31m[ERROR]\033[0m This script must be run as root (use sudo)"
     exit 1
 fi
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # Check Ubuntu version
 if ! grep -q "24.04" /etc/os-release 2>/dev/null; then
@@ -157,14 +141,11 @@ APPARMOR_EOF
 apparmor_parser -r /etc/apparmor.d/bwrap
 log_info "AppArmor profile for bubblewrap loaded"
 
-# Determine script directory for installing companion scripts
-SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Install firewall and privilege-drop scripts
 log_info "Installing firewall and privilege-drop scripts..."
-chmod +x "${SCRIPTS_DIR}/firewall-up.sh" "${SCRIPTS_DIR}/firewall-down.sh" "${SCRIPTS_DIR}/claude-noprivs"
-chmod +x "${SCRIPTS_DIR}/backup-claude.sh" "${SCRIPTS_DIR}/restore-claude.sh"
-ln -sf "${SCRIPTS_DIR}/claude-noprivs" /usr/local/bin/claude-noprivs
+chmod +x "${REPO_DIR}/firewall-up.sh" "${REPO_DIR}/firewall-down.sh" "${REPO_DIR}/claude-noprivs"
+chmod +x "${REPO_DIR}/backup-claude.sh" "${REPO_DIR}/restore-claude.sh"
+ln -sf "${REPO_DIR}/claude-noprivs" /usr/local/bin/claude-noprivs
 
 # Setup ubuntu user SSH key
 log_info "Setting up SSH key for ubuntu user..."
@@ -178,18 +159,22 @@ if ! id -u ubuntu &>/dev/null; then
     useradd -m -s /bin/bash -G sudo ubuntu
 fi
 
-# Create .ssh directory
+# Create .ssh directory and authorized_keys file
 mkdir -p "${SSH_DIR}"
+touch "${AUTHORIZED_KEYS}"
 
-# Add the SSH public key
-SSH_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDCtYAecjMDXHeX8QvV2nppOqrh5GvxG61GmB5v8JFKioIRf1zpjHcWE/VKgyhuWjb3Ywwu5xDapjLPlLAXEesUnxQuJ8lILDbweLxRFyp0z1vP9Y9PypYvfXv2mCgLsJIm/7ys0Xq+qlm6hUX/utAlVH4eUMYliAkAJxaVrt2mmmFMMMQIwhBmwnz7RRtDxli2TGLVNT5PO9KMzmTUYPTRn4AhB9QakBvX+TpOKpvsZ6MDN0oaw4loXt0GgrPhN2D4oQMK/m7s/K5z62HQmKDpd2TXToLu/y2PgoDXjRC9Dv9EK1jE9XJTKMCKrIYCzsTmS08LGBgH1yXK85To9/uEM7WUlxQToiFEEqBnC8Ha7sNcV0MUY60Xq5FXM9AXNX5nenCCWlhyW+FCJVGtnGzodMnjtNGoKs3MUbrpk1lVUz2LPtFdsCz5mj/ev3Y+Tk9dPEwzNrjuf0Yfuz3YjH1gMmvg+T+H/luBwq8avhQI2em5xr3TwXva6Ha2B7kN1uU/FzOmoBPjKBfArnNGNrUNHDhcfOdv/dCfw9ep4E6ksog5epiXCv05Ix3iD/7wxx6Vt6kcCY9BsKrMWUqZdZ0X15H3Nxb1j5oH2/+0fhE7n7TmIYwE2B+/ZX7w1rSfrRHEmf6T12Vo1SiSzMc2+/rrMQ0Af1zwn4N+KxotChxTWw== cardno:000607536908"
-
-# Append key if not already present
-if ! grep -q "cardno:000607536908" "${AUTHORIZED_KEYS}" 2>/dev/null; then
-    echo "${SSH_KEY}" >> "${AUTHORIZED_KEYS}"
-    log_info "SSH key added to ${AUTHORIZED_KEYS}"
+# Add the SSH public key from config
+if [[ -n "${SSH_PUBLIC_KEY:-}" ]]; then
+    # Use the last field of the key (comment) as idempotency identifier
+    SSH_KEY_ID="${SSH_PUBLIC_KEY##* }"
+    if ! grep -qF "${SSH_KEY_ID}" "${AUTHORIZED_KEYS}" 2>/dev/null; then
+        echo "${SSH_PUBLIC_KEY}" >> "${AUTHORIZED_KEYS}"
+        log_info "SSH key added to ${AUTHORIZED_KEYS}"
+    else
+        log_info "SSH key already present in ${AUTHORIZED_KEYS}"
+    fi
 else
-    log_info "SSH key already present in ${AUTHORIZED_KEYS}"
+    log_warn "SSH_PUBLIC_KEY is empty in sandbox.conf — skipping SSH key setup."
 fi
 
 # Set correct permissions
@@ -221,7 +206,7 @@ chown ubuntu:ubuntu "${UBUNTU_HOME}/workspace"
 # Install Ghostty terminfo (fixes "terminal is not fully functional" when SSHing from Ghostty)
 log_info "Installing Ghostty terminfo..."
 if ! infocmp xterm-ghostty &>/dev/null; then
-    tic -x "${SCRIPTS_DIR}/xterm-ghostty.terminfo"
+    tic -x "${REPO_DIR}/xterm-ghostty.terminfo"
     log_info "Ghostty terminfo installed"
 else
     log_info "Ghostty terminfo already installed"
@@ -231,13 +216,21 @@ fi
 log_info "Configuring git..."
 sudo -u ubuntu git config --global init.defaultBranch main
 sudo -u ubuntu git config --global push.default simple
-sudo -u ubuntu git config --global user.email "id-github@andrewkroh.com"
-sudo -u ubuntu git config --global user.name "Andrew Kroh"
+if [[ -n "${GIT_USER_EMAIL:-}" ]]; then
+    sudo -u ubuntu git config --global user.email "${GIT_USER_EMAIL}"
+else
+    log_warn "GIT_USER_EMAIL is empty in sandbox.conf — skipping git email."
+fi
+if [[ -n "${GIT_USER_NAME:-}" ]]; then
+    sudo -u ubuntu git config --global user.name "${GIT_USER_NAME}"
+else
+    log_warn "GIT_USER_NAME is empty in sandbox.conf — skipping git name."
+fi
 
 # Set up bash aliases (overwrite on each run for idempotency)
 log_info "Setting up bash aliases..."
 ALIASES_FILE="${UBUNTU_HOME}/.bash_aliases_claude"
-cat > "${ALIASES_FILE}" << 'EOF'
+cat > "${ALIASES_FILE}" << EOF
 # Claude Code aliases (claude-noprivs is the safer default)
 alias claude='claude-noprivs'
 alias c='claude-noprivs'
@@ -245,8 +238,8 @@ alias c-danger='claude-noprivs --dangerously-skip-permissions'
 alias workspace='cd ~/workspace'
 
 # Backup/restore aliases
-alias claude-backup='/home/ubuntu/code/andrewkroh/claude-setup/backup-claude.sh'
-alias claude-restore='/home/ubuntu/code/andrewkroh/claude-setup/restore-claude.sh'
+alias claude-backup='${REPO_DIR}/backup-claude.sh'
+alias claude-restore='${REPO_DIR}/restore-claude.sh'
 
 # Git aliases
 alias gs='git status'
@@ -271,7 +264,7 @@ mkdir -p "${CLAUDE_CONFIG_DIR}"
 
 # Install status line script
 log_info "Installing status line script..."
-cp "${SCRIPTS_DIR}/statusline.sh" "${CLAUDE_CONFIG_DIR}/statusline.sh"
+cp "${REPO_DIR}/statusline.sh" "${CLAUDE_CONFIG_DIR}/statusline.sh"
 chmod +x "${CLAUDE_CONFIG_DIR}/statusline.sh"
 
 # Create settings file with sandbox enabled, seccomp isolation, and status line
@@ -359,7 +352,7 @@ echo ""
 echo "Backup/restore:"
 echo "  - claude-backup: save ~/.claude/ and ~/.claude.json"
 echo "  - claude-restore: restore from latest backup"
-echo "  - Backups stored in: ${SCRIPTS_DIR}/backups/"
+echo "  - Backups stored in: ${REPO_DIR}/backups/"
 echo ""
 # Get the primary IP address
 VM_IP=$(hostname -I | awk '{print $1}')
@@ -368,8 +361,8 @@ echo "Next steps:"
 echo "  1. SSH into the VM: ssh ubuntu@${VM_IP}"
 echo "  2. Authenticate Claude: claude auth"
 echo "  3. Start with firewall:"
-echo "     sudo ${SCRIPTS_DIR}/firewall-up.sh"
+echo "     sudo ${REPO_DIR}/firewall-up.sh"
 echo "     claude-noprivs"
 echo "     # ... work ..."
-echo "     sudo ${SCRIPTS_DIR}/firewall-down.sh"
+echo "     sudo ${REPO_DIR}/firewall-down.sh"
 echo ""

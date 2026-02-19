@@ -121,6 +121,23 @@ visibility into the active security layers:
 - **FW:ON/OFF** — whether the iptables firewall is active
 - **NNP** — whether `NoNewPrivs` is set on the process
 
+## Getting Started
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/<you>/claude-setup.git
+cd claude-setup
+
+# 2. Create your config from the template
+cp sandbox.conf.example sandbox.conf
+
+# 3. Edit sandbox.conf with your values (git identity, SSH key, etc.)
+$EDITOR sandbox.conf
+
+# 4. Launch the VM (creates, provisions, and prints SSH info)
+./start-cc-sandbox.sh
+```
+
 ## Quick Start
 
 ```bash
@@ -130,8 +147,8 @@ visibility into the active security layers:
 # SSH into the VM
 ssh ubuntu@<vm-ip>
 
-# Enable the firewall
-sudo ~/code/andrewkroh/claude-setup/firewall-up.sh
+# Enable the firewall (path shown in bootstrap output)
+sudo <scripts-dir>/firewall-up.sh
 
 # Run Claude Code (alias applies --no-new-privs automatically)
 c
@@ -151,6 +168,8 @@ claude-restore
 
 | File                       | Purpose                                          |
 |----------------------------|--------------------------------------------------|
+| `sandbox.conf.example`    | Configuration template (copy to `sandbox.conf`)  |
+| `lib.sh`                  | Shared config loader and log helpers             |
 | `start-cc-sandbox.sh`     | Create/start the Multipass VM                    |
 | `bootstrap-ubuntu-24.04.sh`| Provision the VM (packages, users, config)      |
 | `firewall-up.sh`          | Enable the outbound allowlist firewall           |
