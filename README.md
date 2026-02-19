@@ -180,8 +180,10 @@ ssh ubuntu@<vm-ip>
 # Enable the firewall (path shown in bootstrap output)
 sudo <scripts-dir>/firewall-up.sh
 
-# Run Claude Code (alias applies --no-new-privs automatically)
-c
+# Run Claude Code (all aliases apply --no-new-privs automatically)
+c            # interactive mode
+c-danger     # --dangerously-skip-permissions for unattended use
+             # (the sandbox constrains what the agent can do)
 ```
 
 ## Backup & Restore
