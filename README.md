@@ -138,6 +138,32 @@ $EDITOR sandbox.conf
 ./start-cc-sandbox.sh
 ```
 
+## GitHub CLI Authentication
+
+The VM accepts `GH_TOKEN` via SSH environment forwarding so `gh` works
+without persisting credentials on disk.
+
+1. [Create a GitHub personal access token](https://github.com/settings/tokens)
+2. Export it on your macOS host (e.g. in `~/.zshrc`):
+   ```bash
+   export GH_TOKEN="ghp_..."
+   ```
+3. Configure SSH to forward it — add to `~/.ssh/config`:
+   ```
+   Host cc-sandbox
+       HostName <vm-ip>
+       User ubuntu
+       SendEnv GH_TOKEN
+   ```
+4. SSH in and verify:
+   ```bash
+   ssh cc-sandbox
+   gh auth status
+   ```
+
+The token is never written to the VM filesystem — it exists only in the
+SSH session environment.
+
 ## Quick Start
 
 ```bash

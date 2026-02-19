@@ -190,6 +190,13 @@ sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_con
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
 
+# Allow GH_TOKEN to be forwarded via SSH so `gh` authenticates without
+# persisting credentials on disk. Users set SendEnv GH_TOKEN in their
+# SSH client config and export GH_TOKEN on the host.
+if ! grep -q "AcceptEnv GH_TOKEN" /etc/ssh/sshd_config; then
+    echo "AcceptEnv GH_TOKEN" >> /etc/ssh/sshd_config
+fi
+
 # Restart SSH service
 systemctl restart ssh
 
