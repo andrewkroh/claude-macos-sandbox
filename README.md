@@ -182,6 +182,10 @@ c
 
 ## Backup & Restore
 
+Backups are stored on the mounted host directory, so they survive a full
+VM teardown. Back up before destroying a VM to preserve your Claude
+settings and conversation history, then restore after re-provisioning.
+
 ```bash
 # Backup Claude Code config (~/.claude/ and ~/.claude.json)
 claude-backup
