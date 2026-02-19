@@ -3,6 +3,10 @@
 A defense-in-depth sandbox for running [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 inside an isolated VM with multiple security layers.
 
+> **Disclaimer:** This setup has not undergone a formal security audit. The
+> approach is defense in depth — multiple overlapping layers so that no single
+> layer is fully trusted. Use at your own risk.
+
 ## Security Layers
 
 ```
