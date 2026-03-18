@@ -45,6 +45,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
     apt-transport-https \
     software-properties-common \
     build-essential \
+    just \
     python3 \
     python3-pip \
     python3-venv \

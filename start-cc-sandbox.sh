@@ -90,7 +90,7 @@ multipass launch 24.04 \
 
 # Wait for VM to be fully ready
 log_info "Waiting for VM to be ready..."
-sleep 10
+sleep 30
 
 # Verify mount is available
 log_info "Verifying mount..."
